@@ -1,0 +1,126 @@
+<html>
+<head>
+  <title>Simple Database</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .record {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+
+    .record button {
+      float: right;
+    }
+
+    input, button {
+      padding: 8px;
+      margin: 5px;
+    }
+
+    form {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      background: #0066ff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0052cc;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #666;
+      padding: 40px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Simple Database</h1>
+  
+  <form id="addForm">
+    <input type="text" id="nameInput" placeholder="Name" required>
+    <input type="email" id="emailInput" placeholder="Email" required>
+    <input type="tel" id="phoneInput" placeholder="Phone">
+    <button type="submit">Add Record</button>
+  </form>
+
+  <div id="records"></div>
+
+  <script type="module">
+    const room = new WebsimSocket();
+
+    // Initialize the database display
+    function displayRecords(records) {
+      const recordsDiv = document.getElementById('records');
+      
+      if (records.length === 0) {
+        recordsDiv.innerHTML = `
+          <div class="empty-state">
+            No records yet. Add one above!
+          </div>
+        `;
+        return;
+      }
+
+      recordsDiv.innerHTML = records.map(record => `
+        <div class="record">
+          <button onclick="window.deleteRecord('${record.id}')">Delete</button>
+          <strong>${record.name}</strong><br>
+          Email: ${record.email}<br>
+          ${record.phone ? `Phone: ${record.phone}` : ''}
+          <div style="color: #666; font-size: 0.8em;">
+            Added by ${record.username} on ${new Date(record.created_at).toLocaleString()}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Subscribe to database changes
+    room.collection('contact').subscribe(displayRecords);
+
+    // Handle form submission
+    document.getElementById('addForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const record = {
+        name: document.getElementById('nameInput').value,
+        email: document.getElementById('emailInput').value,
+        phone: document.getElementById('phoneInput').value
+      };
+
+      try {
+        await room.collection('contact').create(record);
+        e.target.reset(); // Clear the form
+      } catch (err) {
+        alert('Error adding record: ' + err.message);
+      }
+    });
+
+    // Make deleteRecord available globally
+    window.deleteRecord = async (id) => {
+      try {
+        await room.collection('contact').delete(id);
+      } catch (err) {
+        alert('Error deleting record: ' + err.message);
+      }
+    };
+  </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
